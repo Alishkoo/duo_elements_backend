@@ -1,0 +1,56 @@
+@startuml
+skin rose
+    participant HTTP
+    participant "App" as APP
+    database "Postgres" as DB
+    autonumber
+
+    HTTP->>APP: POST /api/v1/users
+    note right of HTTP
+        Request Body: CreateUserReq
+        {
+          "username": string,
+          "password": string
+        }
+    end note
+
+    APP->>APP: Validate request data
+    
+    alt Invalid request data
+        APP-->>HTTP: Return 400 Bad Request
+        note right of HTTP
+            Status: 400 Bad Request
+        end note
+    else Valid request data
+        APP->>DB: BEGIN transaction
+        note right of DB
+            Транзакция:
+            1. Проверка уникальности username
+            2. Хеширование пароля
+            3. Создание записи пользователя
+        end note
+        
+        alt Database operation successful
+            DB-->>APP: Return user ID
+            APP->>DB: COMMIT transaction
+            APP-->>HTTP: Return 201 Created with user data
+            note right of HTTP
+                Status: 201 Created
+            end note
+        else Username already exists
+            DB-->>APP: Return uniqueness violation
+            APP->>DB: ROLLBACK transaction
+            APP-->>HTTP: Return 409 Conflict
+            note right of HTTP
+                Status: 409 Conflict
+            end note
+        else Database error
+            DB-->>APP: Return database error
+            APP->>DB: ROLLBACK transaction
+            APP-->>HTTP: Return 500 Internal Server Error
+            note right of HTTP
+                Status: 500 Internal Server Error
+            end note
+        end
+    end
+@enduml
