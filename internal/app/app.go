@@ -24,7 +24,7 @@ func Run(configFiles ...string) {
 	errs := make(chan error, 100)
 
 	grace := graceful.New(
-		start.HTTP(errs, cfg),
+		start.HTTP(errs, cfg, conns.DB),
 	)
 
 	grace.Shutdown(errs, log.Default(), conns)

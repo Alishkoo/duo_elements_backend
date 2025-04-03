@@ -6,19 +6,30 @@ import (
 	"time"
 
 	"duo_elements/internal/app/config"
+	userHttp "duo_elements/internal/deliveries/user/http"
+	userRepo "duo_elements/internal/repositories/user"
+	userService "duo_elements/internal/services/user"
 	"duo_elements/pkg/graceful"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func HTTP(errs chan<- error, cfg *config.Config) graceful.Service {
+func HTTP(errs chan<- error, cfg *config.Config, db *sqlx.DB) graceful.Service {
 	startType := "http"
 
 	e := echo.New()
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(middleware.RequestID())
+
+	// Используем слои
+	userRepo := userRepo.NewUserRepository(db)
+	userService := userService.NewUserService(userRepo)
+	userUsecase := userService
+
+	userHttp.RegisterUserRoutes(e, cfg, userUsecase)
 
 	e.GET("/healthcheck", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"message": "test_is_good"})
