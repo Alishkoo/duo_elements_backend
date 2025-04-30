@@ -16,10 +16,6 @@ type UserRepository interface {
 	DeleteUserByID(id int) error
 }
 
-func (u UserRepository) NewUserRepository(db *sqlx.DB) UserRepository {
-	panic("unimplemented")
-}
-
 type userRepository struct {
 	db *sqlx.DB
 }
