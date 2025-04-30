@@ -1,0 +1,84 @@
+@startuml
+skin rose
+participant Client
+participant "App" as APP
+database "Postgres" as DB
+autonumber
+
+== Создание лобби ==
+
+Client->>APP: POST /api/v1/lobbies (Create Lobby)
+note right of Client
+    Request Body: CreateLobbyReq
+    {
+      "host_id": int
+    }
+end note
+
+APP->>DB: BEGIN transaction
+note right of DB
+    Транзакция:
+    1. Создание записи в таблице `lobbies`
+    2. Привязка хоста (host_id) к лобби
+end note
+
+alt Lobby created successfully
+    DB-->>APP: Return lobby ID
+    APP->>DB: COMMIT transaction
+    APP-->>Client: Return 201 Created with lobby ID
+    note right of Client
+        Response Body:
+        {
+          "lobby_id": int,
+          "host_id": int
+        }
+    end note
+else Database error
+    DB-->>APP: Return error
+    APP->>DB: ROLLBACK transaction
+    APP-->>Client: Return 500 Internal Server Error
+    note right of Client
+        Status: 500 Internal Server Error
+    end note
+end
+
+== Присоединение к лобби ==
+
+Client->>APP: POST /api/v1/lobbies/join (Join Lobby)
+note right of Client
+    Request Body: JoinLobbyReq
+    {
+      "lobby_id": int,
+      "user_id": int
+    }
+end note
+
+APP->>DB: Check if lobby exists and is open
+alt Lobby exists and is open
+    DB-->>APP: Lobby found
+    APP->>DB: Add player to `lobby_players`
+    alt Player added successfully
+        DB-->>APP: Return success
+        APP-->>Client: Return 200 OK
+        note right of Client
+            Response Body:
+            {
+              "lobby_id": int,
+              "user_id": int
+            }
+        end note
+    else Database error
+        DB-->>APP: Return error
+        APP-->>Client: Return 500 Internal Server Error
+        note right of Client
+            Status: 500 Internal Server Error
+        end note
+    end
+else Lobby not found or closed
+    DB-->>APP: Return error
+    APP-->>Client: Return 404 Not Found
+    note right of Client
+        Status: 404 Not Found
+    end note
+end
+@enduml

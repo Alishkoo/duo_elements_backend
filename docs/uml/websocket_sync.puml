@@ -1,0 +1,32 @@
+@startuml
+skin rose
+    participant Client1
+    participant "Server" as SERVER
+    participant Client2
+    autonumber
+
+    Client1->>SERVER: WebSocket: Send player position
+    note right of Client1
+        {
+          "player_id": int,
+          "x": float,
+          "y": float
+        }
+    end note
+
+    SERVER->>SERVER: Validate position data
+    alt Invalid data
+        SERVER-->>Client1: Return error message
+    else Valid data
+        SERVER->>DB: Update player position
+        DB-->>SERVER: Acknowledge update
+        SERVER-->>Client2: Broadcast updated position
+        note right of Client2
+            {
+              "player_id": int,
+              "x": float,
+              "y": float
+            }
+        end note
+    end
+@enduml
