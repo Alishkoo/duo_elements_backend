@@ -35,16 +35,25 @@ func HTTP(errs chan<- error, cfg *config.Config, db *sqlx.DB) graceful.Service {
 		return nil
 	})
 
-	// Используем слои
-	userRepo := userRepo.NewUserRepository(db)
-	userService := userService.NewUserService()
-	userUsecase := userUsecases.NewUserUsecase(userRepo, userService)
-	userHttp.RegisterUserRoutes(e, cfg, userUsecase)
+	// Проверяем наличие базы данных
+	if db != nil {
+		// Если база данных доступна, инициализируем слои
+		userRepo := userRepo.NewUserRepository(db)
+		userService := userService.NewUserService()
+		userUsecase := userUsecases.NewUserUsecase(userRepo, userService)
+		userHttp.RegisterUserRoutes(e, cfg, userUsecase)
+		log.Println("Маршруты для пользователей зарегистрированы.")
+	} else {
+		// Если база данных недоступна, выводим предупреждение
+		log.Println("База данных недоступна. Маршруты для пользователей не зарегистрированы.")
+	}
 
+	// Healthcheck endpoint
 	e.GET("/healthcheck", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"message": "test_is_good"})
 	})
 
+	// Запуск HTTP-сервера
 	go func() {
 		errs <- e.Start(cfg.HTTPServer.Host + ":" + cfg.HTTPServer.Port)
 	}()
